@@ -1,6 +1,6 @@
+from django.db import transaction
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from rest_framework.views import exception_handler
 from .models import Category
 
 
@@ -30,8 +30,6 @@ class CategoryTreeSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'parents', 'children', 'siblings')
 
     def get_parents(self, obj):
-        # queryset = Category.objects.filter(id=obj.parent_id)
-        # return CategorySerializer(queryset, many=True, allow_empty=True).data
         return self.get_parent_lst(obj)
 
     def get_parent_lst(self, obj):
@@ -49,6 +47,62 @@ class CategoryTreeSerializer(serializers.ModelSerializer):
 
 
 class CategoryTreeCreateSerializer(serializers.ModelSerializer):
+
+    @staticmethod
+    def check_structure(data: dict):
+        """
+        Check if request data with category tree has correct structure,
+        keys and value data types
+        :param data: category tree data from request
+        :return: True or False
+        """
+        valid_keys = ['name', 'children']
+        if not data:
+            return False
+
+        for key in data.keys():
+            if key not in valid_keys:
+                return False
+
+        name_value = data.get('name', '')
+        if not isinstance(name_value, str) or not name_value.strip():
+            return False
+
+        children = data.get('children', [])
+        if not isinstance(children, list):
+            return False
+        for child in children:
+            if not CategoryTreeCreateSerializer.check_structure(child):
+                return False
+        return True
+
+    @staticmethod
+    def save_structure(tree_data: dict):
+        """
+        Save new category structure or rewrite existing structure
+        :param tree_data: category tree from request
+        :return:
+        """
+        new_root = None
+
+        try:
+            r_ctg_name = tree_data["name"]
+            root_category = Category.objects.get(name=r_ctg_name,
+                                                 parent=None)
+            new_root = root_category
+        except Category.DoesNotExist:
+            new_root = None
+
+        with transaction.atomic():
+            if new_root is not None:
+                root_category.delete()
+
+            new_root = CategoryTreeCreateSerializer.create_root(tree_data[
+                                                                    'name'])
+
+            # save the tree in db with serializer
+            children = tree_data.get("children", [])
+            CategoryTreeCreateSerializer.save_children(new_root.pk, children)
 
     @staticmethod
     def save_children(root_id: int, children: list):
@@ -79,26 +133,19 @@ class CategoryTreeCreateSerializer(serializers.ModelSerializer):
                         save_children(child.pk, category["children"])
 
     @staticmethod
-    def check_structure(data: dict) -> bool:
-        valid_keys = ['name', 'children']
-        if not data:
-            return False
+    def create_root(name):
+        """
+        Create root category with null parent and save it to db
+        :param name: string
+        :return: Category object
+        """
+        root_serializer = CategoryCreateSerializer(data={'name': name,
+                                                         'parent': None})
 
-        for key in data.keys():
-            if key not in valid_keys:
-                return False
-
-        name_value = data.get('name', '')
-        if not isinstance(name_value, str) or not name_value.strip():
-            return False
-
-        children = data.get('children', [])
-        if not isinstance(children, list):
-            return False
-        for child in children:
-            if not CategoryTreeCreateSerializer.check_structure(child):
-                return False
-        return True
+        if root_serializer.is_valid(raise_exception=True):
+            root = root_serializer.create({'name': name,
+                                           'parent': None})
+            return root
 
     class Meta:
         model = Category
