@@ -1,3 +1,5 @@
+""" Categories URL Configuration"""
+
 from django.urls import path
 from categories import views
 

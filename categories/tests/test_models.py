@@ -1,10 +1,12 @@
+""" Test module for models"""
+
 from django.test import TestCase
 from django.db import IntegrityError
 from ..models import Category
 
 
 class CategoryTest(TestCase):
-    """ Test module for Category module """
+    """ Test module for Category model """
 
     def setUp(self) -> None:
         Category.objects.create(name="Category 1", parent=None)
@@ -22,6 +24,7 @@ class CategoryTest(TestCase):
         self.assertFalse(cat_1_1.parent_id == cat_2.id)
 
     def test_unique_field(self):
+        """ Saving object with duplicated name field should raise error """
         with self.assertRaises(IntegrityError):
             Category.objects.create(name="Category 2", parent=None)
 

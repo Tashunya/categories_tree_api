@@ -1,10 +1,14 @@
+"""
+Test module for serializers
+"""
+
 from django.test import TestCase
 from ..serializers import CategorySerializer, \
     CategoryTreeCreateSerializer as CTCSerializer
 
 
 class CategorySerializerTest(TestCase):
-    serializer_class = CategorySerializer
+    """ Test Case for CategorySerializer"""
 
     def setUp(self):
         self.valid_data = {"id": 1, 'name': "Category 1"}
@@ -23,7 +27,7 @@ class CategorySerializerTest(TestCase):
 
 
 class CategoryTreeCreateSerializerTest(TestCase):
-    serializer_class = CTCSerializer
+    """ Test Case for CategoryTreeCreateSerializer"""
 
     def setUp(self):
         self.valid_structure = {
@@ -106,11 +110,13 @@ class CategoryTreeCreateSerializerTest(TestCase):
             CTCSerializer.check_structure(self.valid_structure))
 
     def test_no_children(self):
+        """ One root category in structure considered valid"""
         self.assertTrue(
             CTCSerializer.check_structure(self.valid_structure_2)
         )
 
     def test_check_empty_structure(self):
+        """ Empty category structure considered invalid"""
         self.assertFalse(
             CTCSerializer.check_structure(self.invalid_structure_1))
 
@@ -119,17 +125,21 @@ class CategoryTreeCreateSerializerTest(TestCase):
             CTCSerializer.check_structure(self.invalid_structure_2))
 
     def test_check_empty_name(self):
+        """ Empty name field considered invalid """
         self.assertFalse(
             CTCSerializer.check_structure(self.invalid_structure_3))
 
     def test_check_invalid_key(self):
+        """ Category keys not equal 'name' or 'children' considered invalid """
         self.assertFalse(
             CTCSerializer.check_structure(self.invalid_structure_4))
 
     def test_check_invalid_value(self):
+        """ All values should be string otherwise considered invalid """
         self.assertFalse(
             CTCSerializer.check_structure(self.invalid_structure_5))
 
     def test_check_no_key(self):
+        """ Key 'name' is mandatory field """
         self.assertFalse(
             CTCSerializer.check_structure(self.invalid_structure_6))

@@ -1,9 +1,10 @@
+""" Test module for views """
+
 import json
 from rest_framework import status
 from django.test import TestCase, Client
 from django.urls import reverse
 from ..models import Category
-from ..serializers import CategoryTreeSerializer
 
 
 client = Client()
@@ -17,14 +18,8 @@ class GetCategoryTreeTest(TestCase):
                                         parent=None)
         cat_1_1 = Category.objects.create(name="Category 1.1",
                                           parent=cat_1)
-        cat_1_2 = Category.objects.create(name="Category 1.2",
-                                          parent=cat_1_1)
-        cat_1_2_1 = Category.objects.create(name="Category 1.2.1",
-                                            parent=cat_1_2)
-        cat_1_3 = Category.objects.create(name="Category 1.3",
-                                          parent=cat_1_1)
-        cat_1_3_1 = Category.objects.create(name="Category 1.3.1",
-                                            parent=cat_1_3)
+        Category.objects.create(name="Category 1.2", parent=cat_1_1)
+        Category.objects.create(name="Category 1.3", parent=cat_1_1)
 
         self.correct_response = {'id': 1,
                                  'name': 'Category 1',
@@ -32,26 +27,28 @@ class GetCategoryTreeTest(TestCase):
                                  'children': [
                                      {'id': 2,
                                       'name': 'Category 1.1'}
-                                    ],
+                                 ],
                                  'siblings': []}
 
     def test_get_category_by_id(self):
+        """ Requests with valid id should return 200 status"""
         cat = Category.objects.get(name="Category 1")
         response = client.get(reverse('category_tree',
                                       kwargs={'pk': cat.id}))
-        cat_tree = CategoryTreeSerializer(cat)
         self.assertEqual(response.status_code, status.HTTP_200_OK,
                          "Incorrect status code")
         self.assertEqual(response.data, self.correct_response)
         self.assertEqual(len(response.data), 5)
 
     def test_get_category_invalid_id(self):
+        """ Requests with invalid id should return 404 error """
         invalid_id = 300
         response = client.get(reverse('category_tree',
                                       kwargs={'pk': invalid_id}))
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_request_not_allowed_methods(self):
+        """ Sending requests by post method should return 405 error """
         cat = Category.objects.get(name="Category 1")
         response = client.post(reverse('category_tree',
                                        kwargs={'pk': cat.id}))
@@ -160,6 +157,7 @@ class CreateCategoryTreeTest(TestCase):
         }
 
     def test_create_valid_category_tree(self):
+        """ Correct requests should return 201 status"""
         response = client.post(
             reverse('create_category_tree'),
             data=json.dumps(self.valid_payload),
@@ -170,6 +168,10 @@ class CreateCategoryTreeTest(TestCase):
         self.assertEqual(response_body["detail"], "Category tree created.")
 
     def test_create_invalid_category_tree(self):
+        """
+        Requests with incorrect data structure or empty data should
+        return 400 error and message with details
+        """
         response = client.post(
             reverse('create_category_tree'),
             data=json.dumps(self.invalid_payload),
@@ -191,6 +193,10 @@ class CreateCategoryTreeTest(TestCase):
                                                   "Data")
 
     def test_create_duplicate_category(self):
+        """
+        Requests with duplicated category name should return
+        404 error and message with details
+        """
         response = client.post(
             reverse('create_category_tree'),
             data=json.dumps(self.duplicate_payload),

@@ -1,3 +1,5 @@
+""" Serializer module """
+
 from django.db import transaction
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -5,22 +7,25 @@ from .models import Category
 
 
 class CategorySerializer(serializers.ModelSerializer):
+    """ Serializer for Category model. """
     class Meta:
         model = Category
         fields = ('id', 'name')
 
 
 class CategoryCreateSerializer(serializers.ModelSerializer):
-    # parent = serializers.IntegerField(allow_null=True)
+    """ Serializer for creating Category model. """
     class Meta:
         model = Category
         fields = ('name', 'parent')
 
     def create(self, validated_data):
+        """ Save new category to db """
         return Category.objects.create(**validated_data)
 
 
 class CategoryTreeSerializer(serializers.ModelSerializer):
+    """ Serializer for Category Tree. """
     parents = serializers.SerializerMethodField()
     children = CategorySerializer(many=True, read_only=True)
     siblings = serializers.SerializerMethodField()
@@ -30,9 +35,16 @@ class CategoryTreeSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'parents', 'children', 'siblings')
 
     def get_parents(self, obj):
+        """
+        Return list of ancestors
+        """
         return self.get_parent_lst(obj)
 
     def get_parent_lst(self, obj):
+        """
+        Retrieve parent of current obj and return list of all ancestors
+        till the root
+        """
         if obj.parent_id == None:
             return []
         parent = Category.objects.get(id=obj.parent_id)
@@ -41,12 +53,14 @@ class CategoryTreeSerializer(serializers.ModelSerializer):
         return parents_array
 
     def get_siblings(self, obj):
+        """ Retrieve list of all objects which have same parent as obj """
         queryset = Category.objects.filter(parent_id=obj.parent_id).\
             exclude(id=obj.id)
         return CategorySerializer(queryset, many=True).data
 
 
 class CategoryTreeCreateSerializer(serializers.ModelSerializer):
+    """ Serializer for creating Category Tree """
 
     @staticmethod
     def check_structure(data: dict):
@@ -81,7 +95,7 @@ class CategoryTreeCreateSerializer(serializers.ModelSerializer):
         """
         Save new category structure or rewrite existing structure
         :param tree_data: category tree from request
-        :return:
+        :return: None
         """
         new_root = None
 
@@ -97,8 +111,8 @@ class CategoryTreeCreateSerializer(serializers.ModelSerializer):
             if new_root is not None:
                 root_category.delete()
 
-            new_root = CategoryTreeCreateSerializer.create_root(tree_data[
-                                                                    'name'])
+            new_root = CategoryTreeCreateSerializer.\
+                create_root(tree_data['name'])
 
             children = tree_data.get("children", [])
             CategoryTreeCreateSerializer.save_children(new_root.pk, children)
@@ -119,13 +133,13 @@ class CategoryTreeCreateSerializer(serializers.ModelSerializer):
             # save subcategory in db
 
             try:
-                e = child_serializer.is_valid(raise_exception=True)
+                check = child_serializer.is_valid(raise_exception=True)
             except ValidationError:
                 raise serializers.ValidationError(
                     "Category name '{}' is not unique.".\
                         format(category["name"]))
 
-            if e:
+            if check:
                 child = child_serializer.save()
                 if category.get("children"):
                     CategoryTreeCreateSerializer.\
