@@ -100,7 +100,6 @@ class CategoryTreeCreateSerializer(serializers.ModelSerializer):
             new_root = CategoryTreeCreateSerializer.create_root(tree_data[
                                                                     'name'])
 
-            # save the tree in db with serializer
             children = tree_data.get("children", [])
             CategoryTreeCreateSerializer.save_children(new_root.pk, children)
 

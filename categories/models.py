@@ -8,3 +8,6 @@ class Category(models.Model):
 
     class Meta:
         ordering = ('id', )
+
+    def __repr__(self):
+        return self.name

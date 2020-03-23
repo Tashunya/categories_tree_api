@@ -24,10 +24,8 @@ class CategoryTreeDetail(APIView):
         return Response(category_serializer.data)
 
 
-class CreateCategory(APIView):
-    """
-    Create new category tree in db
-    """
+class CreateCategoryTree (APIView):
+    """ Create new category tree in db """
 
     def post(self, request):
         tree_data = JSONParser().parse(request)
@@ -39,12 +37,9 @@ class CreateCategory(APIView):
                 return JsonResponse({'detail': e.detail[0]},
                                     status=status.HTTP_400_BAD_REQUEST)
             else:
-                # category_tree_serializer = CategoryTreeSerializer(new_root)
-                return JsonResponse({'detail': 'Created'},
+                return JsonResponse({'detail': 'Category tree created.'},
                                     status=status.HTTP_201_CREATED)
 
         else:
             return JsonResponse({'detail': 'Incorrect Category Tree Data'},
                                 status=status.HTTP_400_BAD_REQUEST)
-
-
