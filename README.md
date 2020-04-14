@@ -77,7 +77,7 @@ Retrieves category with its parents, children and siblings by id.
 
 **Request example**:
 
-`curl --header 'Content-Type: application/json' http://localhost:8000/1`
+`curl --header 'Content-Type: application/json' http://localhost:8000/categories/1`
 
 **Response parameters**:
 
